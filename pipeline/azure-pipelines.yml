@@ -1,0 +1,44 @@
+trigger:
+- main
+
+variables:
+  vmImageName: 'ubuntu-latest'
+  projectDir: './src/Groffe.Distancias.Testes'
+
+stages:
+- stage: ScanCodeCheck
+  displayName: ScanCode Check stage
+  jobs:
+  - job: ScanCodeCheck
+    displayName: ScanCodeCheck
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - script: |
+        pip install scancode-toolkit
+      displayName: Instalar ScanCode Toolkit via pip
+    - script: |
+        scancode -h
+      displayName: Testar instalacao do ScanCode
+    - script: |
+        cd $(projectDir)
+        dotnet build
+      displayName: Executar build da aplicacao de testes
+    - script: |
+        cd $(projectDir)
+        scancode -clpeu --verbose --json-pp output-scancode.json --html results-scancode.html .
+      displayName: Executar analise com o ScanCode
+    - script: |
+        cd $(projectDir)
+        ls
+      displayName: Exibir arquivos gerados apos analise do ScanCode
+    - task: PublishHtmlReport@1
+      inputs:
+        reportDir: '$(projectDir)/results-scancode.html'
+      displayName: Publicar HTML com o resultado do ScanCode
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: '$(projectDir)/output-scancode.json'
+        artifact: 'scancode'
+        publishLocation: 'pipeline'
+      displayName: Upload do arquivo JSON com o resultado da analise do ScanCode
